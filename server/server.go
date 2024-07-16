@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"github.com/updevru/go-micro-kit/pkg/discovery"
+	"github.com/updevru/go-micro-kit/discovery"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"

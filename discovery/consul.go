@@ -3,7 +3,7 @@ package discovery
 import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
-	"github.com/updevru/go-micro-kit/pkg/config"
+	"github.com/updevru/go-micro-kit/config"
 	"strconv"
 )
 

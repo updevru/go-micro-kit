@@ -5,31 +5,6 @@
 Набор инструментов создан для Schema-First подхода, когда описываются сервисы в формает [protocol buffers](https://developers.google.com/protocol-buffers)
 формате и далее генерируется код этих сервисов.
 
-## Генерация кода
-
-Установка утилит:
-
-```
-$ go install \
-    github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
-    github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
-    google.golang.org/protobuf/cmd/protoc-gen-go \
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc
-```
-
-Установленные утилиты должны находиться в папке, на которую указывает переменная окружения `$GOBIN`.
-
-Пример генерации кода:
-
-```bash
-protoc -I proto .\proto\store\store.proto \ 
-  --go_out=./gen/ --go_opt=paths=source_relative --go-grpc_out=./gen/ --go-grpc_opt=paths=source_relative \ 
-  --grpc-gateway_out ./gen --grpc-gateway_opt paths=source_relative --grpc-gateway_opt generate_unbound_methods=true \ 
-  --openapiv2_out ./docs --openapiv2_opt allow_merge=true,merge_file_name=api
-```
-
-Команда генерирует весь необходимый go код, gRPC-Gateway и openapi спецификацию.
-
 ## Возможности
 
 ### Bootstrap manager
@@ -55,6 +30,37 @@ protoc -I proto .\proto\store\store.proto \
 ### Observability
 
 Трассировка, метрики и логи в формет [OpenTelemetry](https://opentelemetry.io/docs/languages/go/).
+
+## Установка
+
+```
+go get github.com/updevru/go-micro-kit
+```
+
+## Генерация кода
+
+Установка утилит:
+
+```
+$ go install \
+    github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
+    github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
+    google.golang.org/protobuf/cmd/protoc-gen-go \
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc
+```
+
+Установленные утилиты должны находиться в папке, на которую указывает переменная окружения `$GOBIN`.
+
+Пример генерации кода:
+
+```bash
+protoc -I proto .\proto\store\store.proto \ 
+  --go_out=./gen/ --go_opt=paths=source_relative --go-grpc_out=./gen/ --go-grpc_opt=paths=source_relative \ 
+  --grpc-gateway_out ./gen --grpc-gateway_opt paths=source_relative --grpc-gateway_opt generate_unbound_methods=true \ 
+  --openapiv2_out ./docs --openapiv2_opt allow_merge=true,merge_file_name=api
+```
+
+Команда генерирует весь необходимый go код, gRPC-Gateway и openapi спецификацию.
 
 ## Примеры использования
 
