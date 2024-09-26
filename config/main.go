@@ -21,10 +21,7 @@ type Grpc struct {
 }
 
 func CreateConfig(ctx context.Context, obj any) error {
-	err := godotenv.Load()
-	if err != nil {
-		return err
-	}
+	_ = godotenv.Load()
 
 	return envconfig.Process(ctx, obj)
 }
