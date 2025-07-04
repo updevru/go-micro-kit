@@ -1,19 +1,16 @@
-package telemetry
+package logger
 
 import (
 	slogmulti "github.com/samber/slog-multi"
 	slogsentry "github.com/samber/slog-sentry/v2"
-	"go.opentelemetry.io/contrib/bridges/otelslog"
-	"go.opentelemetry.io/otel/log/global"
 	"log/slog"
 	"os"
 )
 
-func CreateLoggerWithTelemetry() *slog.Logger {
+func CreateLogger() *slog.Logger {
 	return slog.New(
 		slogmulti.Fanout(
 			slog.NewJSONHandler(os.Stdout, nil),
-			otelslog.NewHandler("main", otelslog.WithLoggerProvider(global.GetLoggerProvider())),
 			slogsentry.Option{Level: slog.LevelError}.NewSentryHandler(),
 		),
 	)

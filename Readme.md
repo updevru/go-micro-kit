@@ -79,7 +79,7 @@ func main() {
 	}
 
 	// Настройка OpenTelemetry
-	otelShutdown, err := telemetry.SetupOTelSDK(ctx)
+	otelShutdown, err := telemetry.SetupTelemetry(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -87,7 +87,7 @@ func main() {
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}()
 
-	logger := telemetry.CreateLogger()
+	logger := telemetry.CreateLoggerWithTelemetry()
 	tracer := telemetry.CreateTracer()
 	meter := telemetry.CreateMeter()
 

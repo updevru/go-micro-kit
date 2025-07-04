@@ -13,11 +13,18 @@ import (
 
 type GrpcHandler func(*grpc.Server)
 
-func (s *Server) Grpc(cfg *config.Grpc, handlers ...GrpcHandler) {
-	s.group.Go(func() error {
-		srv := grpc.NewServer(
+func (s *Server) Grpc(cfg *config.Grpc, opts []grpc.ServerOption, handlers ...GrpcHandler) {
+	s.grpcServer = func() error {
+		options := []grpc.ServerOption{
 			grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		)
+		}
+
+		// Подключаем дополнительные опции
+		if len(opts) > 0 {
+			options = append(options, opts...)
+		}
+
+		srv := grpc.NewServer(options...)
 
 		healthcheck := health.NewServer()
 		healthgrpc.RegisterHealthServer(srv, healthcheck)
@@ -28,7 +35,7 @@ func (s *Server) Grpc(cfg *config.Grpc, handlers ...GrpcHandler) {
 
 		listen, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
 		if err != nil {
-			s.logger.Error("failed to listen", err)
+			s.logger.Error("failed to listen", slog.String("error", err.Error()))
 			return err
 		}
 
@@ -40,10 +47,10 @@ func (s *Server) Grpc(cfg *config.Grpc, handlers ...GrpcHandler) {
 
 		s.logger.Info("grpc server listening at", slog.String("address", listen.Addr().String()))
 		if err := srv.Serve(listen); err != nil {
-			s.logger.Error("failed to serve: %v", err)
+			s.logger.Error("failed to serve: %v", slog.String("error", err.Error()))
 			return err
 		}
 
 		return nil
-	})
+	}
 }

@@ -13,6 +13,10 @@ type App struct {
 type Http struct {
 	Host string `env:"HOST, default=localhost"`
 	Port string `env:"PORT, default=8080"`
+
+	// Настройки CORS
+	AllowedOrigins []string `env:"ALLOW_ORIGINS, default=*"`
+	AllowedHeaders []string `env:"ALLOW_HEADERS, default=*"`
 }
 
 type Grpc struct {

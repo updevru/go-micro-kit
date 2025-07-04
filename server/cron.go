@@ -16,7 +16,7 @@ type CronTask struct {
 }
 
 func (s *Server) Cron(tasks []CronTask) {
-	s.group.Go(func() error {
+	s.cronServer = func() error {
 		scheduler, err := gocron.NewScheduler()
 		if err != nil {
 			return err
@@ -53,7 +53,12 @@ func (s *Server) Cron(tasks []CronTask) {
 		if err := s.runEventWorkerStart(); err != nil {
 			return err
 		}
-		defer s.runEventWorkerStop()
+		defer func(s *Server) {
+			err := s.runEventWorkerStop()
+			if err != nil {
+				s.logger.ErrorContext(s.ctx, "RunEventWorkerStop error", slog.String("error", err.Error()))
+			}
+		}(s)
 
 		scheduler.Start()
 		<-s.ctx.Done()
@@ -61,5 +66,5 @@ func (s *Server) Cron(tasks []CronTask) {
 		s.logger.InfoContext(s.ctx, "Cron server stopping")
 
 		return scheduler.Shutdown()
-	})
+	}
 }

@@ -11,19 +11,18 @@ import (
 
 type Server struct {
 	ctx    context.Context
-	group  *errgroup.Group
 	logger *slog.Logger
 	tracer trace.Tracer
 	meter  metric.Meter
 	events []Event
+
+	grpcServer func() error
+	httpServer func() error
+	cronServer func() error
 }
 
-func NewServer(ctx context.Context, logger *slog.Logger, tracer trace.Tracer, meter metric.Meter) *Server {
-	group, groupCtx := errgroup.WithContext(ctx)
-
+func NewServer(logger *slog.Logger, tracer trace.Tracer, meter metric.Meter) *Server {
 	return &Server{
-		ctx:    groupCtx,
-		group:  group,
 		logger: logger,
 		tracer: tracer,
 		meter:  meter,
@@ -40,14 +39,34 @@ func (s *Server) AddDiscovery(discovery discovery.Discovery) {
 	})
 }
 
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
+	group, groupCtx := errgroup.WithContext(ctx)
+	s.ctx = groupCtx
+
+	if s.grpcServer != nil {
+		group.Go(s.grpcServer)
+	}
+
+	if s.httpServer != nil {
+		group.Go(s.httpServer)
+	}
+
+	if s.cronServer != nil {
+		group.Go(s.cronServer)
+	}
+
 	if err := s.runEventServiceStart(); err != nil {
 		return err
 	}
-	defer s.runEventServiceStop()
+	defer func(s *Server) {
+		err := s.runEventServiceStop()
+		if err != nil {
+			s.logger.ErrorContext(s.ctx, "RunEventServiceStop error", slog.String("error", err.Error()))
+		}
+	}(s)
 
-	if err := s.group.Wait(); err != nil {
-		s.logger.ErrorContext(s.ctx, "exit reason: %s", err)
+	if err := group.Wait(); err != nil {
+		s.logger.ErrorContext(groupCtx, "exit reason: %s", slog.String("error", err.Error()))
 		return err
 	}
 
