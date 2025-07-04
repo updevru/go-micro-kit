@@ -79,7 +79,8 @@ func main() {
 	}
 
 	// Настройка OpenTelemetry
-	otelShutdown, err := telemetry.SetupTelemetry(ctx)
+	var telemetryConfig telemetry.Config
+	otelShutdown, err := telemetry.SetupTelemetry(ctx, telemetryConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -92,18 +93,19 @@ func main() {
 	meter := telemetry.CreateMeter()
 
 	// Создаем Bootstrap manager
-	app := server.NewServer(ctx, logger, tracer, meter)
-    
+	app := server.NewServer(logger, tracer, meter)
+
 	// Инифализируем и добавляем gRPC сервисы
-	app.Grpc(&cfg.Grpc, func(g *grpc.Server) {
+	app.Grpc(&cfg.Grpc, []grpc.ServerOption{}, func(g *grpc.Server) {
         pbStore.RegisterStoreServer(g)
     })
 
 	//Инициализируем и добавляем gRPC-Gateway, так же можем добавить дополнительные роуты
     app.Http(&cfg.Http, &cfg.Grpc, func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-        return []server.HttpHandler{
-            pbStore.RegisterStoreHandler,
+        if err := pbStore.RegisterStoreHandler(ctx, mux, conn); err != nil {
+            return err
         }
+        return nil
     })
 
     // Добавляем фоновые задачи по расписанию
@@ -123,7 +125,7 @@ func main() {
 	app.AddDiscovery(consul)
 
 	// Запуск приложения
-	if err := app.Run(); err != nil {
+	if err := app.Run(ctx); err != nil {
 		logger.ErrorContext(ctx, "Failed to run server: %v", err)
 		panic(err)
 	}
@@ -143,5 +145,87 @@ type Config struct {
 	Http config.Http `env:",prefix=HTTP_"`
 	Grpc config.Grpc `env:",prefix=GRPC_"`
 	Option string `env:"OPTION, default=value"`
+}
+```
+
+### Работа с базой данных
+
+Библиотека предоставляет простой интерфейс для работы с базами данных через [GORM](https://gorm.io/). 
+Поддерживается подключение к PostgreSQL и автоматическая миграция схемы базы данных.
+
+#### Подключение к базе данных
+
+```go
+import (
+    "github.com/updevru/go-micro-kit/database"
+    "gorm.io/gorm"
+)
+
+// Подключение к PostgreSQL
+db, err := database.Connect("host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable")
+if err != nil {
+    panic(err)
+}
+
+// Использование GORM для работы с базой данных
+result := db.First(&User{}, 1)
+```
+
+#### Миграция базы данных
+
+Библиотека поддерживает автоматическую миграцию схемы базы данных на основе моделей GORM.
+
+```go
+import (
+    "context"
+    "github.com/updevru/go-micro-kit/database"
+)
+
+// Определение модели
+type User struct {
+    gorm.Model
+    Name  string
+    Email string `gorm:"uniqueIndex"`
+}
+
+// Регистрация модели для миграции
+database.AddModel(&User{})
+
+// Выполнение миграции
+err := database.Migrate(ctx, tracer, db)
+if err != nil {
+    panic(err)
+}
+```
+
+Миграция автоматически создаст таблицы, индексы и связи на основе определенных моделей.
+Процесс миграции также интегрирован с OpenTelemetry для трассировки.
+
+#### Интеграция с основным приложением
+
+Пример интеграции работы с базой данных в основное приложение:
+
+```go
+func main() {
+    // ... инициализация приложения ...
+
+    // Подключение к базе данных
+    db, err := database.Connect(cfg.Database.DSN)
+    if err != nil {
+        logger.ErrorContext(ctx, "Failed to connect to database", slog.String("error", err.Error()))
+        panic(err)
+    }
+
+    // Регистрация моделей для миграции
+    database.AddModel(&User{})
+    database.AddModel(&Product{})
+
+    // Выполнение миграции
+    if err := database.Migrate(ctx, tracer, db); err != nil {
+        logger.ErrorContext(ctx, "Failed to migrate database", slog.String("error", err.Error()))
+        panic(err)
+    }
+
+    // ... запуск приложения ...
 }
 ```
