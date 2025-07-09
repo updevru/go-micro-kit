@@ -101,7 +101,7 @@ func main() {
     })
 
 	//Инициализируем и добавляем gRPC-Gateway, так же можем добавить дополнительные роуты
-    app.Http(&cfg.Http, &cfg.Grpc, func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+    app.Http(&cfg.Http, &cfg.Grpc, []runtime.ServeMuxOption{}, func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
         if err := pbStore.RegisterStoreHandler(ctx, mux, conn); err != nil {
             return err
         }

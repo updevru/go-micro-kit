@@ -27,7 +27,7 @@ func customHeaderMatcher(key string) (string, bool) {
 	}
 }
 
-func (s *Server) Http(cfg *config.Http, cfgRpc *config.Grpc, handlers ...HttpHandler) {
+func (s *Server) Http(cfg *config.Http, cfgRpc *config.Grpc, opts []runtime.ServeMuxOption, handlers ...HttpHandler) {
 	s.httpServer = func() error {
 		con, _ := grpc.NewClient(
 			fmt.Sprintf(":%s", cfgRpc.Port),
@@ -35,7 +35,7 @@ func (s *Server) Http(cfg *config.Http, cfgRpc *config.Grpc, handlers ...HttpHan
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		)
 
-		srv := runtime.NewServeMux(
+		options := []runtime.ServeMuxOption{
 			runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(con)),
 			runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
 			runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
@@ -45,7 +45,13 @@ func (s *Server) Http(cfg *config.Http, cfgRpc *config.Grpc, handlers ...HttpHan
 					UseEnumNumbers:    false,
 				},
 			}),
-		)
+		}
+
+		for _, opt := range opts {
+			options = append(options, opt)
+		}
+
+		srv := runtime.NewServeMux(options...)
 
 		for _, handler := range handlers {
 			if err := handler(s.ctx, srv, con); err != nil {
