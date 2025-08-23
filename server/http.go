@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
+
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/updevru/go-micro-kit/config"
 	"github.com/updevru/go-micro-kit/server/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/encoding/protojson"
-	"log/slog"
-	"net/http"
 )
 
 type HttpHandler func(context.Context, *runtime.ServeMux, *grpc.ClientConn) error
@@ -21,6 +23,9 @@ type HttpHandler func(context.Context, *runtime.ServeMux, *grpc.ClientConn) erro
 func customHeaderMatcher(key string) (string, bool) {
 	switch key {
 	case "Authorization":
+		return key, true
+	case "Traceparent", "Tracestate", "Baggage":
+		// Allow W3C trace context headers to pass through to gRPC metadata
 		return key, true
 	default:
 		return runtime.DefaultHeaderMatcher(key)
@@ -63,9 +68,11 @@ func (s *Server) Http(cfg *config.Http, cfgRpc *config.Grpc, opts []runtime.Serv
 		corsMiddleware := middleware.NewCorsMiddleware(cfg.AllowedOrigins, cfg.AllowedHeaders)
 
 		address := fmt.Sprintf(":%s", cfg.Port)
+		// Wrap the REST gateway with OpenTelemetry HTTP middleware to extract incoming trace context
+		otelHandler := otelhttp.NewHandler(srv, "http-gateway")
 		httpServer := &http.Server{
 			Addr:    address,
-			Handler: corsMiddleware(srv),
+			Handler: corsMiddleware(otelHandler),
 		}
 
 		go func() {
