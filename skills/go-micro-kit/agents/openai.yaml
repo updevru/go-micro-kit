@@ -1,0 +1,4 @@
+interface:
+  display_name: "go-micro-kit"
+  short_description: "Build Go microservices with github.com/updevru/go-micro-kit."
+  default_prompt: "Use go-micro-kit to build, modify, or debug a Go microservice."

@@ -37,6 +37,14 @@
 go get github.com/updevru/go-micro-kit
 ```
 
+## Установка skill для AI-агента
+
+Для более удобной работы с фреймворком можно установить agent skill:
+
+```bash
+npx skills add updevru/go-micro-kit --skill go-micro-kit
+```
+
 ## Генерация кода
 
 Установка утилит:
